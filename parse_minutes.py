@@ -1,3 +1,4 @@
+from cProfile import run
 import re
 import os
 from datetime import datetime
@@ -6,11 +7,86 @@ from parsedatetime import Calendar
 from PyPDF2 import PdfReader
 from sqlite_utils import Database
 
+BAD_BUNNIES = ["Ezzy Ashcraft Matarrese", "Ezzy Ashcraft Oddie", "Ezzy Ashcraft Tam"]
+
+# ORDER MATTERS!
+# Text is hard
+COUNCILMEMBER_REPLACEMENTS = (
+    # Get rid of fluff
+    ("Present: ", ""),
+    ("Councilmembers/Commissioners ", ""),
+    ("Councilmembers/Agency Members ", ""),
+    ("Councilmembers/Authority Members ", ""),
+    ("Councilmembers/Board Members/Commissioners", ""),
+    ("Councilmembers/ Commissioners/ Authority Members / Board Members", ""),
+    ("and                Mayor/Chair Johnson", "Johnson"),
+    ("Councilmembers/Commissioners/Authority/Board         Members Daysog", "Daysog"),
+    ("Commissioners Daysog", "Daysog"),
+    ("Spencer 5.    Absent: None.", "Spencer"),
+    ("and Mayor/Chair Ezzy Ashcraft", "Ezzy Ashcraft"),
+    ("Spencer 5.", "Spencer"),
+    ("Ayes", ""),
+    ("and Mayor/Chair ", ""),
+    ("and Acting Chair ", ""),
+    ("and Chair ", ""),
+    ("and     Mayor/Chair ", ""),
+    ("and Mayor ", ""),
+    ("Councilmembers ", ""),
+    ("Commissioners ", ""),
+    ("Agency Members ", ""),
+    ("Councilmember ", ""),
+    ("Commissioner ", ""),
+    ("//Authority/Board         Members ", ""),
+    ("Regular Meeting Alameda City Council February 4, 2014 Chen", "Chen"),
+    ("Councilmembers", ""),
+    ("Councilmember s ", ""),
+    ("Councilmember ", ""),
+    ("Vice Mayor ", ""),
+    ("Acting Mayor ", ""),
+    ("and May or ", ""),
+    ("and Ma yor ", ""),
+    ("and Mayor ", ""),
+    ("Mayor ", ""),
+    # Change spaces to commas
+    ("Vella Ezzy Ashcraft", "Vella, Ezzy Ashcraft"),
+    ("Vella Spencer –", "Vella, Spencer"),
+    ("Oddie Spencer", "Oddie, Spencer"),
+    ("Vella Spencer", "Vella, Spencer"),
+    ("and Mayor/Chair Ezzy Ashcraft", "Ezzy Ashcraft"),
+    ("Tam Gilmore", "Tam, Gilmore"),
+    ("Tam and", "Tam"),
+    ("Tam  Gilmore", "Tam, Gilmore"),
+    ("Tam Johnson", "Tam, Johnson"),
+    ("Matarrese          Johnson", "Matarrese, Johnson"),
+    # Fix weird spellings
+    ("Jo hnson", "Johnson"),
+    ("As hcraft", "Ashcraft"),
+    ("Ash-craft", "Ashcraft"),
+    ("Kn ox White", "Knox White"),
+    # What's in a name? Spaces, according to PDFs
+    # These next two are getting for getting her name consistently right
+    ("Herrera Spencer", "Spencer"),
+    ("Spencer", "Herrera Spencer"),
+    ("Ezzy Ashcraft", "Ezzy"),
+    ("Ezzy", "Ezzy Ashcraft"),
+    ("s Daysog", "Daysog"),
+    (" and ", ""),
+    ("Herrera Spencer 5.", "Herrera Spencer"),
+    ("Herrera Spencer 5.    Absent: None.", "Herrera Spencer"),
+    ("Herrera Spencer    Absent: None.", "Herrera Spencer"),
+)
+
+
+def run_through_replacements(text):
+    for replace_args in COUNCILMEMBER_REPLACEMENTS:
+        text = text.replace(*replace_args)
+    return text
+
 
 def main(filename):
     print(filename)
     # Setup some utilities
-    db = Database("alameda_data.db")
+    db = Database("city_council.db")
     reader = PdfReader(filename)
     calendar = Calendar()
 
@@ -57,21 +133,17 @@ def main(filename):
                 current_item_title = line.split(") ")[1]
                 item_id = current_item.strip("()")
             except IndexError:
-                print(line)
+                # print(line)
                 continue
         if line.startswith("CONSENT CALENDAR"):
             current_item = "Consent Calendar"
-        # Need a call-out for voice vote (see 109, 19-320)
-        # Councilmember Vella seconded the motion, which carried by the following voice vote: Ayes: Councilmembers Knox White, Oddie, Vella and Mayor Ezzy Ashcraft – 4. Noes: Councilmember Daysog – 1.
 
         if line.lower().startswith("roll call - "):
             roll_call_line = line
             working = line.split(" - ")[1]
-            members = working.replace("Present: Councilmembers ", "").split(", ")
-            members = [
-                member.replace("and Mayor ", "").replace(" – 5.", "").rstrip()
-                for member in members
-            ]
+            working = run_through_replacements(working)
+            members = working.split(", ")
+            members = [member.split(" – ")[0].strip() for member in members]
 
         if "unanimous voice vote" in line.lower():
             if (
@@ -82,14 +154,15 @@ def main(filename):
             ):
                 try:
                     for voter in members:
-                        votes_to_upsert.append(
-                            {
-                                "councilmember": voter,
-                                "item": item_id,
-                                "vote": "aye",
-                                "id": f"{item_id}-{voter}",
-                            }
-                        )
+                        if voter:
+                            votes_to_upsert.append(
+                                {
+                                    "councilmember": voter.strip(","),
+                                    "item": item_id,
+                                    "vote": "aye",
+                                    "id": f"{item_id}-{voter}",
+                                }
+                            )
                         items_to_upsert.append(
                             {
                                 "id": item_id,
@@ -125,25 +198,8 @@ def main(filename):
                     majority = "no"
                     for vote in votes_raw:
                         vote = vote.split(": ")
-                        name = (
-                            vote[0]
-                            # Text parsing is hard
-                            .replace("Councilmember s ", "")
-                            .replace("Councilmember ", "")
-                            .replace("Vice Mayor ", "")
-                            .replace("Acting Mayor ", "")
-                            .replace("and May or ", "")
-                            .replace("and Ma yor ", "")
-                            .replace("and Mayor ", "")
-                            .replace("Mayor ", "")
-                            # What's in a name? Spaces, according to PDFs
-                            .replace("As hcraft", "Ashcraft")
-                            .replace("Ash-craft", "Ashcraft")
-                            .replace("Kn ox White", "Knox White")
-                            # These next two are getting for getting her name consistently right
-                            .replace("Herrera Spencer", "Spencer")
-                            .replace("Spencer", "Herrera Spencer")
-                        )
+                        name = vote[0]
+                        name = run_through_replacements(name)
                         name = name.strip()
                         choice = vote[1]
                         choice = choice.lower()
@@ -154,14 +210,16 @@ def main(filename):
                             choice = "aye"
                             votes_for += 1
                         # votes.append((name, choice))
-                        votes_to_upsert.append(
-                            {
-                                "councilmember": name,
-                                "item": item_id,
-                                "vote": choice,
-                                "id": f"{item_id}-{name}",
-                            }
-                        )
+                        # name = run_through_replacements(name)
+                        if name:
+                            votes_to_upsert.append(
+                                {
+                                    "councilmember": name.strip(","),
+                                    "item": item_id,
+                                    "vote": choice,
+                                    "id": f"{item_id}-{name}",
+                                }
+                            )
 
                     if votes_for > votes_against:
                         majority = "aye"
