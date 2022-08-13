@@ -1,4 +1,3 @@
-from cProfile import run
 import re
 import os
 from datetime import datetime
@@ -6,6 +5,8 @@ from datetime import datetime
 from parsedatetime import Calendar
 from PyPDF2 import PdfReader
 from sqlite_utils import Database
+
+import random
 
 BAD_BUNNIES = ["Ezzy Ashcraft Matarrese", "Ezzy Ashcraft Oddie", "Ezzy Ashcraft Tam"]
 
@@ -250,7 +251,9 @@ def main(filename):
 
 if __name__ == "__main__":
     path = "/Users/phildini/Downloads/alameda/city_council_minutes"
-    for minutes in sorted(os.listdir(path)):
+    files = sorted(os.listdir(path))
+    # files = [random.choice(files) for _ in range(10)]
+    for minutes in files:
         # if minutes == "Minutes(101).pdf":
         main(f"{path}/{minutes}")
 
