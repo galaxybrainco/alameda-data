@@ -10,6 +10,9 @@ parsedatetime = "*"
 datasette = "*"
 black = "*"
 s3-ocr = "*"
+s3-credentials = "*"
+requests = "*"
+beautifulsoup4 = "*"
 
 [dev-packages]
 

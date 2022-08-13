@@ -250,11 +250,12 @@ def main(filename):
 
 
 if __name__ == "__main__":
-    path = "./city_council_minutes"
+    path = "./data/CityCouncil"
     files = sorted(os.listdir(path))
     # files = [random.choice(files) for _ in range(10)]
     for minutes in files:
         # if minutes == "Minutes(101).pdf":
-        main(f"{path}/{minutes}")
+        if minutes.endswith(".pdf"):
+            main(f"{path}/{minutes}")
 
     # main("Minutes.pdf")
