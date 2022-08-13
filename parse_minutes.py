@@ -250,7 +250,7 @@ def main(filename):
 
 
 if __name__ == "__main__":
-    path = "/Users/phildini/Downloads/alameda/city_council_minutes"
+    path = "./city_council_minutes"
     files = sorted(os.listdir(path))
     # files = [random.choice(files) for _ in range(10)]
     for minutes in files:

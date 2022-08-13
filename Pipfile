@@ -4,11 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pypdf2 = "*"
+pypdf2 = "==2.5.0"
 sqlite-utils = "*"
 parsedatetime = "*"
 datasette = "*"
 black = "*"
+s3-ocr = "*"
 
 [dev-packages]
 
