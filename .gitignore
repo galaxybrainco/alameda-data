@@ -1,2 +1,6 @@
 out.txt
 alameda_data.db
+
+.DS_Store
+
+*.db
