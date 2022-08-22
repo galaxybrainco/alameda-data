@@ -8,7 +8,6 @@ from sqlite_utils import Database
 
 import random
 
-BAD_BUNNIES = ["Ezzy Ashcraft Matarrese", "Ezzy Ashcraft Oddie", "Ezzy Ashcraft Tam"]
 
 # ORDER MATTERS!
 # Text is hard

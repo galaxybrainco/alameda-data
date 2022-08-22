@@ -1,0 +1,15 @@
+{
+    "title": "Alameda City Data",
+    "databases": {
+        "alameda_minutes": {
+            "tables": {
+                "ocr_jobs": {
+                    "hidden": true
+                },
+                "fetched_jobs": {
+                    "hidden": true
+                }
+            }
+        }
+    }
+}
