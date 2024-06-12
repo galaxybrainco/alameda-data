@@ -1,6 +1,8 @@
 out.txt
 alameda_data.db
-
+out/
 .DS_Store
 
 *.db
+
+.venv
