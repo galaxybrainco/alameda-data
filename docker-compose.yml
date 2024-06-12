@@ -6,11 +6,5 @@ services:
     ports:
       - "8001:8001"
     volumes:
-      - "./dbs:/mnt"
-    command:
-      - 'datasette'
-      - '-p'
-      - '8001'
-      - '-h'
-      - '0.0.0.0'
-      - '/mnt/alameda_minutes.db'
+      - "./:/mnt"
+    command: datasette -p 8001 -h 0.0.0.0 --metadata /mnt/metadata.json --plugins-dir=/mnt/plugins /mnt/city_minutes.db /mnt/alameda_minutes.db
